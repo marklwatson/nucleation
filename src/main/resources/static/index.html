@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <title>Sinter</title>
+    <meta name="description" content=""/>
+    <meta name="viewport" content="width=device-width"/>
+    <base href="/"/>
+    <link rel="stylesheet" type="text/css" href="/webjars/bootstrap/css/bootstrap.min.css"/>
+    <script type="text/javascript" src="/webjars/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="/webjars/bootstrap/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="/webjars/paper/0.9.22/paper-full.js"></script>
+	<script type="text/javascript" src="sinter.js"></script>
+	<script type="text/javascript" src="/webjars/angularjs/angular.min.js"></script>
+	<script type="text/javascript">
+		window.onload = function() {
+			// Get a reference to the canvas object
+			var canvas = document.getElementById('myCanvas');
+			// Create an empty project and a view for the canvas:
+			paper.setup(canvas);
+			// Create a Paper.js Path to draw a line into it:
+			var path = new paper.Path();
+			// Give the stroke a color
+			path.strokeColor = 'black';
+			var start = new paper.Point(100, 100);
+			// Move to start and draw a line from there
+			path.moveTo(start);
+			// Note that the plus operator on Point objects does not work
+			// in JavaScript. Instead, we need to call the add() function:
+			path.lineTo(start.add([ 200, -50 ]));
+			// Draw the view now:
+			paper.view.draw();
+		};
+
+	</script>
+	    
+</head>
+<body ng-app="app" ng-controller="home as home">
+	<canvas id="myCanvas" resize></canvas>
+</body>
+</html>
