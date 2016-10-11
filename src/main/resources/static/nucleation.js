@@ -7,6 +7,8 @@ function Ball(r, p, v) {
 	this.boundOffset = [];
 	this.boundOffsetBuff = [];
 	this.sidePoints = [];
+
+
 	this.path = new Path({
 		fillColor: {
 			hue: Math.random() * 360,
@@ -111,6 +113,8 @@ Ball.prototype = {
 //--------------------- main ---------------------
 
 var balls = [];
+
+/*
 var numBalls = 18;
 for (var i = 0; i < numBalls; i++) {
 	var position = Point.random() * view.size;
@@ -121,6 +125,24 @@ for (var i = 0; i < numBalls; i++) {
 	var radius = Math.random() * 60 + 60;
 	balls.push(new Ball(radius, position, vector));
 }
+*/
+
+balls.push(new Ball(35, new Point(0,0), new Point({
+    angle: 45,
+    length: 5
+})));
+balls.push(new Ball(50, new Point(0,1000), new Point({
+    angle: 135,
+    length: 5
+})))
+balls.push(new Ball(50, new Point(1000,0), new Point({
+    angle: 215,
+    length: 5
+})));
+balls.push(new Ball(50, new Point(1000,1000), new Point({
+    angle: 215,
+    length: 5
+})));
 
 function onFrame() {
 	for (var i = 0; i < balls.length - 1; i++) {

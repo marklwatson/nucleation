@@ -1,4 +1,4 @@
 server:
-  port: 9999
-  context-path: /sinter
+  port: 8080
+  context-path: /nucleation
   
