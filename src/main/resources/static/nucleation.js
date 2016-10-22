@@ -1,9 +1,12 @@
-function Ball(r, p, v) {
-	this.radius = r;
-	this.point = p;
-	this.vector = v;
+function Ball(pRadius, pPoint, pVector) {
+
+	this.radius = pRadius;
+	this.point = pPoint;  //it's location
+	this.vector = pVector;  //it's direction
+
 	this.maxVec = 15;
-	this.numSegment = Math.floor(r / 3 + 2);
+	this.numSegment = Math.floor(this.radius / 3 + 2);
+
 	this.boundOffset = [];
 	this.boundOffsetBuff = [];
 	this.sidePoints = [];
@@ -11,7 +14,7 @@ function Ball(r, p, v) {
 
 	this.path = new Path({
 		fillColor: {
-			hue: Math.random() * 360,
+			hue: 'blue',
 			saturation: 1,
 			brightness: 1
 		},
@@ -30,6 +33,8 @@ function Ball(r, p, v) {
 }
 
 Ball.prototype = {
+
+    //what does this function do?
 	iterate: function() {
 		this.checkBorders();
 		if (this.vector.length > this.maxVec)
@@ -38,6 +43,7 @@ Ball.prototype = {
 		this.updateShape();
 	},
 
+    //checks to see if the ball hit the wall
 	checkBorders: function() {
 		var size = view.size;
 		if (this.point.x < -this.radius)
@@ -110,11 +116,13 @@ Ball.prototype = {
 	}
 };
 
+
 //--------------------- main ---------------------
 
-var balls = [];
 
 /*
+var balls = [];
+
 var numBalls = 18;
 for (var i = 0; i < numBalls; i++) {
 	var position = Point.random() * view.size;
@@ -125,7 +133,6 @@ for (var i = 0; i < numBalls; i++) {
 	var radius = Math.random() * 60 + 60;
 	balls.push(new Ball(radius, position, vector));
 }
-*/
 
 balls.push(new Ball(35, new Point(0,0), new Point({
     angle: 45,
@@ -144,7 +151,33 @@ balls.push(new Ball(50, new Point(1000,1000), new Point({
     length: 5
 })));
 
+*/
+
+
+
+var circle = new Path.Circle({
+    center: view.center,
+    radius: 25,
+    fillColor: 'red'
+});
+
 function onFrame() {
+
+/*
+    var myFPath = new Path();
+    myFPath.strokeColor = 'black';
+    //myFPath.add(new Point(0,0));
+    //myFPath.add(new Point(1000,1000));
+    var start = new Point(100,100);
+    myFPath.moveTo(start);
+    myFPath.lineTo(start + [100,100])
+*/
+
+
+
+
+/*
+
 	for (var i = 0; i < balls.length - 1; i++) {
 		for (var j = i + 1; j < balls.length; j++) {
 			balls[i].react(balls[j]);
@@ -153,4 +186,10 @@ function onFrame() {
 	for (var i = 0, l = balls.length; i < l; i++) {
 		balls[i].iterate();
 	}
+*/
+}
+
+function onResize(event) {
+    circle.position =  view.center;
+    console.log('y');
 }

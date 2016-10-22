@@ -7,6 +7,6 @@ body {
 
 /* Scale canvas with resize attribute to full size */
 canvas {
-    width: 1000px;
-    height: 1000px;
+    width: 750px;
+    height: 750px;
 }
