@@ -8,8 +8,22 @@
 </head>
 <body>
 <div>
-    <H1>This is just text to see what happens</H1>
+    <H3>Nucleation</H3>
+    <table>
+        <tr>
+            <td>Temp</td>
+            <td>Pressure (log)</td>
+            <td>Deposit Rate</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><input type="text" name="temp" value="300"></td>
+            <td><input type="text" name="pressure" value="-4"></td>
+            <td><input type="text" name="depRate" value="25"></td>
+            <td><input type="submit" name="go" value="Run"></td>
+        </tr>
+    </table>
+    <canvas id="myCanvas" resize></canvas>
 </div>
-<canvas id="myCanvas" resize></canvas>
 </body>
 </html>
