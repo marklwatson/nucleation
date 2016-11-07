@@ -1,36 +1,56 @@
-function SphereCap(pos, rad){
-
+function Molecule(rad, ttl){
     this.radius = rad;
+    this.timeToLive = ttl;
+    this.timeToDie = Date.now() + this.timeToLive*1000;
+}
+
+function SphereCap(pos, molecs, cs){
+
+    this.criticalSize = cs;
+
+    //all of the molecule instances that make up the cluster
+    this.molecules = [];
+    if(molecs instanceof Array){
+        for(i = 0; i < molecs.length; i++){
+            this.molecules.push(molecs[i]);
+        }
+    }
+    else{
+        this.molecules.push(molecs);
+    }
+
+    //the calculated radius.  it is "immutable".  Probably make this smarter
+    this.radius = 0;
+    for(i = 0; i < this.molecules.length; i++){
+        this.radius = this.radius + this.molecules[i].radius;
+    }
+
+    //this is the actual graphic that is displayed
     this.circle = new Path.Circle({
                      center: pos,
-                     radius: rad,
+                     radius: this.radius,
                      fillColor: 'red'
                  });
 
-    this.vector = new Point(0,0);
 
+    //use this during a processing loop to flag it if it is to be removed
     this.keep = true;
 
-    //add a "contained atoms" construct
-    //   and a "critical number" construct
-    //   so that if the contained atoms is less than then the critical number
-    //   the individual atoms can desorb and leave the cluster.
+    //add a "velocity" concept, and move the atoms more pixles based on velocity
 
-    //add a "time to live" perhaps randomly varied between some values
+    //vary velocity and desorption (and anything else?) based on Temperature
 
-    //set up a deposit rate and add a new number of them within that rate.  randomize it somehow
-
-    // all of those parameters should be variable by T
-
-    //set up a % covered limit to end the simulation
+    //set up a % covered limit to end the simulation, and record the time
 
     //draw the grid.
-    //draw dashboard to show time elapsed and % covered in the simulation
-    //create input parameters and a go/reset button
 
 }
 
 SphereCap.prototype = {
+
+    getRadius: function(){
+        return this.radius;
+    },
 
     move: function(){
         //this.circle.position = this.circle.position + [1,0];
@@ -45,8 +65,8 @@ SphereCap.prototype = {
 
     collision: function(sc){
     	var dist = this.circle.position.getDistance(sc.circle.position);
-    	var myrad = this.radius;
-    	var scrad = sc.radius;
+    	var myrad = this.getRadius();
+    	var scrad = sc.getRadius();
     	if ( (dist < (myrad + scrad)) && (dist != 0)) {
     	    return true;
     	}
@@ -56,8 +76,42 @@ SphereCap.prototype = {
     combine: function(sc){
         var position = this.circle.position.add(sc.circle.position);
         position = position.divide(2);
-        var rad = this.radius + sc.radius; //this is wrong.  do the calc
-        return new SphereCap(position, rad);
+        var rad = this.getRadius() + sc.getRadius(); //this is wrong.  do the calc
+        var molecs = [];
+        for(i = 0; i < this.molecules.length; i++){
+            molecs.push(this.molecules[i]);
+        }
+        for(i = 0; i < sc.molecules.length; i++){
+            molecs.push(sc.molecules[i]);
+        }
+        var nsc = new SphereCap(position, molecs, this.criticalSize);
+
+        return nsc;
+    },
+
+    desorb: function(now){
+        if(this.molecules.length>=this.criticalSize){
+            this.keep = true;
+            return this;
+        }
+        var newMolecules = [];
+        for(i = 0; i < this.molecules.length; i++){
+            var e = this.molecules[i];
+            if(e.timeToDie>=now){
+                newMolecules.push(e);
+            }
+        }
+        if(newMolecules.length>=this.molecules.length){
+            this.keep = true;
+            return this;
+        }
+        if(newMolecules.length<1){
+            this.keep = false;
+            return null;
+        }
+        this.keep = false;
+        var nsc = new SphereCap(this.circle.position, newMolecules, this.criticalSize);
+        return nsc;
     },
 
     remove: function(){
@@ -68,18 +122,68 @@ SphereCap.prototype = {
 
 var caps = [];
 
-for(i = 0; i < 500; i++){
-    caps.push(new SphereCap(new Point(Math.random()*750, Math.random()*750), 2));
-}
 
+var canvasWidth = 750;
+var canvasHeight = 750;
 var timeStepSize = .25;
 var lastTime = 0;
+
+var depositionRate = 10;  //in atoms per second
+var timeToLive = 300; //in seconds
+var criticalSize = 3;
+
+var runSimulation = true;
+
+//document.getElementById("runSimBtn").onclick = function (){
+//    runSimulation = true;
+//}
+
 function onFrame(event){
+    if(!runSimulation){
+        return;
+    }
+
      lastTime = lastTime + event.delta;
      if(lastTime >=timeStepSize){
+
+        //delete old dots
+        desorb();
+
+        ////add new dots
+        deposit();
+
         process();
+
         lastTime = 0;
      }
+}
+
+function deposit(){
+    var amountToAdd = Math.round(depositionRate*timeStepSize);
+    for(k = 0; k < amountToAdd; k++){
+        caps.push(new SphereCap(new Point(Math.random()*canvasWidth, Math.random()*canvasHeight),
+                    new Molecule(2, timeToLive),
+                    criticalSize));
+    }
+}
+
+function desorb(){
+    var now = Date.now();
+    var newCaps = [];
+    var c;
+   	for (var i = 0; i < caps.length; i++) {
+   	    c = caps[i].desorb(now);
+   	    if(c != null){
+   	        newCaps.push(c);
+   	    }
+    }
+    for (var i = 0; i < caps.length; i++) {
+        if(!caps[i].keep){
+            caps[i].remove();
+        }
+    }
+
+    caps = newCaps;
 }
 
 function process(){
