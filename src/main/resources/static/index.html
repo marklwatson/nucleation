@@ -4,7 +4,14 @@
     <link rel="stylesheet" type="text/css" href="nuc.css"/>
 	<script type="text/javascript" src="paperjs/paper-full.js"></script>
 	<script type="text/paperscript" src="play.js" canvas="myCanvas"></script>
-
+    <script type="text/javascript">
+        window.globals = {
+            runSimulation: false
+        };
+        function goClicked(){
+            window.globals.runSimulation = true;
+        }
+    </script>
 </head>
 <body>
 <div align="center">
@@ -20,7 +27,7 @@
             <td><input type="text" name="temp" value="300"></td>
             <td><input type="text" name="pressure" value="-4"></td>
             <td><input type="text" name="depRate" value="25"></td>
-            <td><input type="submit" name="go" value="Run"></td>
+            <td><input type="submit" id="go" name="go" value="Run" onclick="goClicked()"></td>
         </tr>
     </table>
     <canvas id="myCanvas" resize></canvas>

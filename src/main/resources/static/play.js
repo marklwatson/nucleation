@@ -132,14 +132,14 @@ var depositionRate = 10;  //in atoms per second
 var timeToLive = 300; //in seconds
 var criticalSize = 3;
 
-var runSimulation = true;
+//var runSimulation = false;
 
 //document.getElementById("runSimBtn").onclick = function (){
 //    runSimulation = true;
 //}
 
 function onFrame(event){
-    if(!runSimulation){
+    if(!globals.runSimulation){
         return;
     }
 
