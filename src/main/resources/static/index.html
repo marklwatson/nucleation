@@ -13,6 +13,7 @@
             depRate: 25,
             simulationEnded: function(ctime){
                 completeTime = ctime;
+                document.getElementById('runTime').value = completeTime;
             }
         };
         function goClicked(){
@@ -38,8 +39,14 @@
         </tr>
         <tr>
             <td colspan="4">
-                <canvas id="myCanvas" width="550px" height="550px"></canvas>
+                <canvas id="myCanvas" style="width:550px;height:550px" width="550px" height="550px"></canvas>
             </td>
+        </tr>
+        <tr>
+            <td>Run Time:<input type="text" id="runTime" name="runTime"> millis</td>
+            <td></td>
+            <td></td>
+            <td></td>
         </tr>
     </table>
 </div>

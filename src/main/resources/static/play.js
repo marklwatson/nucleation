@@ -36,17 +36,11 @@ function SphereCap(pos, molecs, cs){
     //use this during a processing loop to flag it if it is to be removed
     this.keep = true;
 
-    //add a "velocity" concept, and move the atoms more pixles based on velocity
-    //vary velocity and desorption (and anything else?) based on Temperature
-
-    //set up a % covered limit to end the simulation, and record the time
-
-    //draw the grid.
-
-    //fix the problems.
-
-    //set velocity based on temp
-    //set deposition rate based on pressure
+    //set velocity based on temp.  Figure out the algorithm
+    //set desorption rate based on pressure and temp
+    //set deposit rate based on pressure and temp
+    //re-read nucleation section to make sure all of this is accurate and see if you
+    //can vary anything else 
 
 }
 
@@ -181,6 +175,7 @@ frameRect.strokeColor = 'black';
 function onFrame(event){
     if(!running){
         if(globals.runSimulation){
+            resetGrid();
             temp = globals.temp;
             pressure = globals.pressure;
             depositionRate = globals.depRate;
@@ -211,6 +206,13 @@ function onFrame(event){
 
         lastTime = 0;
      }
+}
+
+function resetGrid(){
+    for(i = 0; i < caps.length; i++){
+        caps[i].remove();
+    }
+    caps = [];
 }
 
 function deposit(){
