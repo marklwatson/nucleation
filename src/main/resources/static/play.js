@@ -37,12 +37,16 @@ function SphereCap(pos, molecs, cs){
     this.keep = true;
 
     //add a "velocity" concept, and move the atoms more pixles based on velocity
-
     //vary velocity and desorption (and anything else?) based on Temperature
 
     //set up a % covered limit to end the simulation, and record the time
 
     //draw the grid.
+
+    //fix the problems.
+
+    //set velocity based on temp
+    //set deposition rate based on pressure
 
 }
 
@@ -53,14 +57,34 @@ SphereCap.prototype = {
     },
 
     move: function(){
-        //this.circle.position = this.circle.position + [1,0];
-        var x = 1 - Math.random() * 2;
-        var y = 1 - Math.random() * 2;
+        var rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
+        var x = rand * speedRatio;
+        rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
+        var y = rand * speedRatio;
+        //var x = (1 - Math.random()) * 2;  //speedRatio
+        //var y = (1 - Math.random()) * 2;  //used to be 2
         var newx = this.circle.position.x + x;
         var newy = this.circle.position.y + y;
+
         var newPt = new Point(newx, newy);
 
         this.circle.position = newPt;
+        this.checkBorders();
+    },
+
+    checkBorders: function(){
+        if((this.circle.position.x - this.radius)<0){
+            this.circle.position.x = this.radius;
+        }
+        if((this.circle.position.x + this.radius)>canvasWidth){
+            this.circle.position.x = canvasWidth - this.radius;
+        }
+        if((this.circle.position.y - this.radius)<0){
+            this.circle.position.y = this.radius;
+        }
+        if((this.circle.position.y + this.radius)>canvasHeight){
+            this.circle.position.y = canvasHeight - this.radius;
+        }
     },
 
     collision: function(sc){
@@ -85,7 +109,7 @@ SphereCap.prototype = {
             molecs.push(sc.molecules[i]);
         }
         var nsc = new SphereCap(position, molecs, this.criticalSize);
-
+        nsc.checkBorders();
         return nsc;
     },
 
@@ -116,6 +140,10 @@ SphereCap.prototype = {
 
     remove: function(){
         this.circle.remove();
+    },
+
+    area: function(){
+        return this.circle.area;
     }
 
 }
@@ -123,24 +151,51 @@ SphereCap.prototype = {
 var caps = [];
 
 
-var canvasWidth = 750;
-var canvasHeight = 750;
+var canvasWidth = 550;
+var canvasHeight = 550;
+var canvasArea = canvasWidth*canvasHeight;
 var timeStepSize = .25;
 var lastTime = 0;
 
 var depositionRate = 10;  //in atoms per second
-var timeToLive = 300; //in seconds
 var criticalSize = 3;
 
-//var runSimulation = false;
+var running = false;
+var temp = 300;
+var pressure = -4;
+var timeToLive = 300; //in seconds
+var startTime = 0;
 
-//document.getElementById("runSimBtn").onclick = function (){
-//    runSimulation = true;
-//}
+var pi = 3.14;
+var piSqd = pi*pi;
+
+var speedRatio = 4;
+
+//myCanvas.width = canvasWidth;
+//myCanvas.height = canvasHeight;
+
+var rect = new Rectangle(new Point(1,1), new Size(canvasWidth-2, canvasHeight-2));
+var frameRect = new Path.Rectangle(rect);
+frameRect.strokeColor = 'black';
 
 function onFrame(event){
-    if(!globals.runSimulation){
-        return;
+    if(!running){
+        if(globals.runSimulation){
+            temp = globals.temp;
+            pressure = globals.pressure;
+            depositionRate = globals.depRate;
+            startTime = Date.now();
+            running = true;
+        }
+        else{
+            return;
+        }
+    }
+    else{
+        if(!globals.runSimulation){
+            running = false;
+            return;
+        }
     }
 
      lastTime = lastTime + event.delta;
@@ -187,6 +242,7 @@ function desorb(){
 }
 
 function process(){
+    var totalCapArea = 0;
     var newCaps = [];
    	for (var i = 0; i < caps.length; i++) {
         caps[i].move();
@@ -198,20 +254,33 @@ function process(){
                 if(caps[i].collision(caps[j])){
                     caps[i].keep = false;
                     caps[j].keep = false;
-                    newCaps.push(caps[i].combine(caps[j]));
+                    var nc = caps[i].combine(caps[j]);
+                    newCaps.push(nc);
+                    totalCapArea = totalCapArea + nc.area();
                 }
        	    }
         }
     }
+
     for (var i = 0; i < caps.length; i++) {
         if(caps[i].keep){
             newCaps.push(caps[i]);
+            totalCapArea = totalCapArea + caps[i].area();
         }
         else{
             caps[i].remove();
         }
     }
+
     caps = newCaps;
+
+    if((totalCapArea)>=(piSqd*canvasArea)){
+        globals.runSimulation = false;
+        running = false;
+        var endTime = Date.now();
+        var totalTime = endTime - startTime;
+        globals.simulationEnded(totalTime);
+    }
 
 }
 

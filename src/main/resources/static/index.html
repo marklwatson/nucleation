@@ -5,8 +5,15 @@
 	<script type="text/javascript" src="paperjs/paper-full.js"></script>
 	<script type="text/paperscript" src="play.js" canvas="myCanvas"></script>
     <script type="text/javascript">
+        var completeTime = 0;
         window.globals = {
-            runSimulation: false
+            runSimulation: false,
+            temp: 300,
+            pressure: -4,
+            depRate: 25,
+            simulationEnded: function(ctime){
+                completeTime = ctime;
+            }
         };
         function goClicked(){
             window.globals.runSimulation = true;
@@ -15,7 +22,7 @@
 </head>
 <body>
 <div align="center">
-    <H3>Nucleation</H3>
+    <!-- <H3>Nucleation</H3>  -->
     <table>
         <tr>
             <td>Temp</td>
@@ -29,8 +36,12 @@
             <td><input type="text" name="depRate" value="25"></td>
             <td><input type="submit" id="go" name="go" value="Run" onclick="goClicked()"></td>
         </tr>
+        <tr>
+            <td colspan="4">
+                <canvas id="myCanvas" width="550px" height="550px"></canvas>
+            </td>
+        </tr>
     </table>
-    <canvas id="myCanvas" resize></canvas>
 </div>
 </body>
 </html>
