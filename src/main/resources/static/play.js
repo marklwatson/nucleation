@@ -23,10 +23,10 @@ function SphereCap(pos, molecs, cs){
         this.molecules.push(molecs);
     }
 
-    //the calculated radius.  it is "immutable".  TODO:  Probably make this smarter
+    //the calculated radius.  it is "immutable".
     this.radius = 0;
     for(i = 0; i < this.molecules.length; i++){
-        this.radius = this.radius + this.molecules[i].radius;
+        this.radius = addRadii(this.radius, this.molecules[i].radius,2);
     }
 
     //this is the actual graphic that is displayed
@@ -105,7 +105,7 @@ SphereCap.prototype = {
     combine: function(sc){
         var position = this.circle.position.add(sc.circle.position);
         position = position.divide(2);
-        var rad = this.getRadius() + sc.getRadius(); //TODO:  this is wrong.  do the calc
+        //var rad = addRadii(this.getRadius(), sc.getRadius());
         var molecs = [];
         for(i = 0; i < this.molecules.length; i++){
             molecs.push(this.molecules[i]);
@@ -165,7 +165,7 @@ var canvasWidth = 550;
 var canvasHeight = 550;
 var canvasArea = canvasWidth*canvasHeight;
 var timeStepSize = .25;
-var pi = 3.14;
+var pi = Math.PI;
 var piSqd = pi*pi;
 
 //process flow variables
@@ -184,8 +184,6 @@ var depositionRate = 10;  //in atoms per second.  calculated based on temp/press
 var timeToLive = 300; //in seconds.  calculated based on temp/pressure ???
 var speedRatio = 4;//in arb units.  calculated based on temp
 
-initializePage();
-
 /*
   Called once on page load
 */
@@ -194,6 +192,8 @@ function initializePage(){
     var frameRect = new Path.Rectangle(rect);
     frameRect.strokeColor = 'black';
 }
+
+initializePage();
 
 /*
 Determines if the process should be run on an invocation of onFrame
@@ -215,7 +215,7 @@ function doRun(){
     else{
         if(!globals.runSimulation){
             running = false;
-            return return false;;
+            return false;
         }
         return true;
     }
@@ -224,19 +224,25 @@ function doRun(){
 /*
 Perform all calculations based on input values
 */
-    //set velocity based on temp.  Figure out the algorithm
-    //set desorption rate based on pressure and temp
-    //set critical size based on passed in value
-    //set deposit rate based on pressure and temp
-    //re-read nucleation section to make sure all of this is accurate and see if you
-    //can vary anything else
-
-    //determine how to calculate the radius of 2 collisions and for the creation
-    //of another dot that has multiple dots in it's cluster (look at the TODOs)
 function setParameters(){
     temp = globals.temp;
     pressure = globals.pressure;
+    criticalSize = globals.criticalSize;
+
+
+    //Surface Diffusion.  set velocity based on temp.  TODO:  Figure out the algorithm
+    speedRatio = 4;
+
+    //set timeToLive or (desorption rate) based on pressure and temp.
+    timeToLive = 30; //in seconds.  calculated based on temp/pressure ???     TODO:  Figure out the algorithm
+
+    //set deposit rate based on pressure and temp.    TODO:  Figure out the algorithm
     depRate = 10;  //in atoms per second
+
+}
+
+function addRadii(r1, r2){
+    return Math.sqrt(Math.pow(r1,2) + Math.pow(r2,2));
 }
 
 /*

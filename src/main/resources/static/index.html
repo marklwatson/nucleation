@@ -13,7 +13,11 @@
             criticalSize: 3,
             simulationEnded: function(ctime){
                 completeTime = ctime;
-                document.getElementById('runTime').value = completeTime;
+                var sec = Math.round(completeTime / 1000);
+                var millis = completeTime % 1000;
+                var min = Math.round(sec / 60);
+                var sec = sec % 60;
+                document.getElementById('runTime').value = min + ' min. ' + sec + ' sec. ' + millis + ' millis';
             }
         };
         function goClicked(){
@@ -46,7 +50,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="4">Run Time:<input type="text" id="runTime" name="runTime"> millis</td>
+            <td colspan="4">Run Time:<input type="text" id="runTime" name="runTime"></td>
         </tr>
     </table>
 </div>
