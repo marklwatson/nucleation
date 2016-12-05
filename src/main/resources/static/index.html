@@ -10,13 +10,16 @@
             runSimulation: false,
             temp: 300,
             pressure: -4,
-            depRate: 25,
+            criticalSize: 3,
             simulationEnded: function(ctime){
                 completeTime = ctime;
                 document.getElementById('runTime').value = completeTime;
             }
         };
         function goClicked(){
+            window.globals.temp = document.getElementById('temp').value;
+            window.globals.pressure = document.getElementById('pressure').value;
+            window.globals.criticalSize = document.getElementById('criticalSize').value;
             window.globals.runSimulation = true;
         }
     </script>
@@ -28,13 +31,13 @@
         <tr>
             <td>Temp</td>
             <td>Pressure (log)</td>
-            <td>Deposit Rate</td>
+            <td>Critical Size</td>
             <td></td>
         </tr>
         <tr>
-            <td><input type="text" name="temp" value="300"></td>
-            <td><input type="text" name="pressure" value="-4"></td>
-            <td><input type="text" name="depRate" value="25"></td>
+            <td><input type="text" name="temp" id="temp" value="300"></td>
+            <td><input type="text" name="pressure" id="pressure" value="-4"></td>
+            <td><input type="text" name="criticalSize" id="criticalSize" value="3"></td>
             <td><input type="submit" id="go" name="go" value="Run" onclick="goClicked()"></td>
         </tr>
         <tr>
@@ -43,10 +46,7 @@
             </td>
         </tr>
         <tr>
-            <td>Run Time:<input type="text" id="runTime" name="runTime"> millis</td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td colspan="4">Run Time:<input type="text" id="runTime" name="runTime"> millis</td>
         </tr>
     </table>
 </div>

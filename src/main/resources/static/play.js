@@ -4,8 +4,12 @@ function Molecule(rad, ttl){
     this.timeToDie = Date.now() + this.timeToLive*1000;
 }
 
+/*
+Object definition of a sphere cap.
+*/
 function SphereCap(pos, molecs, cs){
 
+    //number of smaller SphereCaps in the cluster to prevent desorption
     this.criticalSize = cs;
 
     //all of the molecule instances that make up the cluster
@@ -19,7 +23,7 @@ function SphereCap(pos, molecs, cs){
         this.molecules.push(molecs);
     }
 
-    //the calculated radius.  it is "immutable".  Probably make this smarter
+    //the calculated radius.  it is "immutable".  TODO:  Probably make this smarter
     this.radius = 0;
     for(i = 0; i < this.molecules.length; i++){
         this.radius = this.radius + this.molecules[i].radius;
@@ -36,27 +40,25 @@ function SphereCap(pos, molecs, cs){
     //use this during a processing loop to flag it if it is to be removed
     this.keep = true;
 
-    //set velocity based on temp.  Figure out the algorithm
-    //set desorption rate based on pressure and temp
-    //set deposit rate based on pressure and temp
-    //re-read nucleation section to make sure all of this is accurate and see if you
-    //can vary anything else 
-
 }
 
+/*
+Object methods for a Sphere Cap
+*/
 SphereCap.prototype = {
 
     getRadius: function(){
         return this.radius;
     },
 
+    /*
+    Moves this cap according to the calculated speedRatio
+    */
     move: function(){
         var rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
         var x = rand * speedRatio;
         rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
         var y = rand * speedRatio;
-        //var x = (1 - Math.random()) * 2;  //speedRatio
-        //var y = (1 - Math.random()) * 2;  //used to be 2
         var newx = this.circle.position.x + x;
         var newy = this.circle.position.y + y;
 
@@ -66,6 +68,9 @@ SphereCap.prototype = {
         this.checkBorders();
     },
 
+    /*
+    Determines if this cap is created or moved close to the border, and moves it away if so.
+    */
     checkBorders: function(){
         if((this.circle.position.x - this.radius)<0){
             this.circle.position.x = this.radius;
@@ -81,6 +86,9 @@ SphereCap.prototype = {
         }
     },
 
+    /*
+    Determines if this dot has collided with the passed in dot
+    */
     collision: function(sc){
     	var dist = this.circle.position.getDistance(sc.circle.position);
     	var myrad = this.getRadius();
@@ -91,10 +99,13 @@ SphereCap.prototype = {
         return false;
     },
 
+    /*
+    Creates a new dot that is the combination of this dot and the passed in dot
+    */
     combine: function(sc){
         var position = this.circle.position.add(sc.circle.position);
         position = position.divide(2);
-        var rad = this.getRadius() + sc.getRadius(); //this is wrong.  do the calc
+        var rad = this.getRadius() + sc.getRadius(); //TODO:  this is wrong.  do the calc
         var molecs = [];
         for(i = 0; i < this.molecules.length; i++){
             molecs.push(this.molecules[i]);
@@ -107,6 +118,12 @@ SphereCap.prototype = {
         return nsc;
     },
 
+    /*
+    Determines if any dot within the cluster should desorb.
+    If so, it will set itself to be removed and return a new dot with the desorbed dot out of the cluster.
+    If no more dots remain in the cluster, it will just set itself it be removed and return null.
+    If it shouldn't be removed, it will return null.
+    */
     desorb: function(now){
         if(this.molecules.length>=this.criticalSize){
             this.keep = true;
@@ -142,72 +159,89 @@ SphereCap.prototype = {
 
 }
 
-var caps = [];
 
-
+//simulation environment parameters
 var canvasWidth = 550;
 var canvasHeight = 550;
 var canvasArea = canvasWidth*canvasHeight;
 var timeStepSize = .25;
-var lastTime = 0;
-
-var depositionRate = 10;  //in atoms per second
-var criticalSize = 3;
-
-var running = false;
-var temp = 300;
-var pressure = -4;
-var timeToLive = 300; //in seconds
-var startTime = 0;
-
 var pi = 3.14;
 var piSqd = pi*pi;
 
-var speedRatio = 4;
+//process flow variables
+var running = false;
+var lastTime = 0;
+var startTime = 0;
 
-//myCanvas.width = canvasWidth;
-//myCanvas.height = canvasHeight;
+//global list of caps
+var caps = [];
 
-var rect = new Rectangle(new Point(1,1), new Size(canvasWidth-2, canvasHeight-2));
-var frameRect = new Path.Rectangle(rect);
-frameRect.strokeColor = 'black';
+//varying parameters per simulation
+var temp = 300;  // set by user
+var pressure = -4;  // set by user
+var criticalSize = 3;   //set by user
+var depositionRate = 10;  //in atoms per second.  calculated based on temp/pressure
+var timeToLive = 300; //in seconds.  calculated based on temp/pressure ???
+var speedRatio = 4;//in arb units.  calculated based on temp
 
-function onFrame(event){
+initializePage();
+
+/*
+  Called once on page load
+*/
+function initializePage(){
+    var rect = new Rectangle(new Point(1,1), new Size(canvasWidth-2, canvasHeight-2));
+    var frameRect = new Path.Rectangle(rect);
+    frameRect.strokeColor = 'black';
+}
+
+/*
+Determines if the process should be run on an invocation of onFrame
+*/
+function doRun(){
     if(!running){
         if(globals.runSimulation){
             resetGrid();
             temp = globals.temp;
             pressure = globals.pressure;
-            depositionRate = globals.depRate;
             startTime = Date.now();
             running = true;
+            return true;
         }
         else{
-            return;
+            return false;
         }
     }
     else{
         if(!globals.runSimulation){
             running = false;
-            return;
+            return return false;;
         }
+        return true;
     }
-
-     lastTime = lastTime + event.delta;
-     if(lastTime >=timeStepSize){
-
-        //delete old dots
-        desorb();
-
-        ////add new dots
-        deposit();
-
-        process();
-
-        lastTime = 0;
-     }
 }
 
+/*
+Perform all calculations based on input values
+*/
+    //set velocity based on temp.  Figure out the algorithm
+    //set desorption rate based on pressure and temp
+    //set critical size based on passed in value
+    //set deposit rate based on pressure and temp
+    //re-read nucleation section to make sure all of this is accurate and see if you
+    //can vary anything else
+
+    //determine how to calculate the radius of 2 collisions and for the creation
+    //of another dot that has multiple dots in it's cluster (look at the TODOs)
+function setParameters(){
+    temp = globals.temp;
+    pressure = globals.pressure;
+    depRate = 10;  //in atoms per second
+}
+
+/*
+Clear off dots from previous run
+*/
 function resetGrid(){
     for(i = 0; i < caps.length; i++){
         caps[i].remove();
@@ -215,6 +249,9 @@ function resetGrid(){
     caps = [];
 }
 
+/*
+Add dots according to calculated rate
+*/
 function deposit(){
     var amountToAdd = Math.round(depositionRate*timeStepSize);
     for(k = 0; k < amountToAdd; k++){
@@ -224,6 +261,9 @@ function deposit(){
     }
 }
 
+/*
+Remove dots according to calculated rate.
+*/
 function desorb(){
     var now = Date.now();
     var newCaps = [];
@@ -243,9 +283,17 @@ function desorb(){
     caps = newCaps;
 }
 
+/*
+  The complex processing of a single processing.
+  First, it moves the dots according to the calculated rate.
+  Next it detects collisions.  It will combine dots that collide into a single dot.
+  Next it will remove the dots that collided (because combining just adds a new one without removing the old).
+  Finally, it compares the area covered vs. the total area and terminates the simulation if it's enough.
+*/
 function process(){
     var totalCapArea = 0;
     var newCaps = [];
+
    	for (var i = 0; i < caps.length; i++) {
         caps[i].move();
     }
@@ -286,8 +334,29 @@ function process(){
 
 }
 
-function onKeyDown(event) {
-	// When a key is pressed, set the content of the text item:
-	//text.content = 'The ' + event.key + ' key was pressed!';
-}
+/*
+  Called by Paper.js framework up to 60 times per second.
 
+  This is the primary function.
+  If the simulation is running, or should start, it executes the process
+   First it desorbs() i.e. all the atoms that have been there too long go away.
+   Next ie deposits() i.e. add new atoms according to the calculated rate.
+   Finally it executes the process, which does a lot (see comments)
+*/
+function onFrame(event){
+     lastTime = lastTime + event.delta;
+     if(lastTime >=timeStepSize){
+        if(doRun()){
+
+            //delete old dots
+            desorb();
+
+            ////add new dots
+            deposit();
+
+            process();
+
+            lastTime = 0;
+        }
+     }
+}
