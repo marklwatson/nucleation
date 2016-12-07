@@ -52,13 +52,13 @@ SphereCap.prototype = {
     },
 
     /*
-    Moves this cap according to the calculated speedRatio
+    Moves this cap according to the calculated maxDiffusionJumps
     */
     move: function(){
         var rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
-        var x = rand * speedRatio;
+        var x = rand * maxDiffusionJumps;
         rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
-        var y = rand * speedRatio;
+        var y = rand * maxDiffusionJumps;
         var newx = this.circle.position.x + x;
         var newy = this.circle.position.y + y;
 
@@ -182,7 +182,7 @@ var pressure = -4;  // set by user
 var criticalSize = 3;   //set by user
 var depositionRate = 10;  //in atoms per second.  calculated based on temp/pressure
 var timeToLive = 300; //in seconds.  calculated based on temp/pressure ???
-var speedRatio = 4;//in arb units.  calculated based on temp
+var maxDiffusionJumps = 4;//in arb units.  calculated based on temp
 
 /*
   Called once on page load
@@ -201,6 +201,7 @@ Determines if the process should be run on an invocation of onFrame
 function doRun(){
     if(!running){
         if(globals.runSimulation){
+            setParameters();
             resetGrid();
             temp = globals.temp;
             pressure = globals.pressure;
@@ -229,16 +230,68 @@ function setParameters(){
     pressure = globals.pressure;
     criticalSize = globals.criticalSize;
 
+    //validate input temperature
+    if(temp<0){
+        temp = 0;
+    }
+    if(temp>1687.15){
+        temp = 1687.15;
+    }
 
-    //Surface Diffusion.  set velocity based on temp.  TODO:  Figure out the algorithm
-    speedRatio = 4;
+    //validate input pressure
+    pressure = Math.abs(pressure);
+    if(pressure > 9){
+        pressure = 9;
+    }
 
-    //set timeToLive or (desorption rate) based on pressure and temp.
-    timeToLive = 30; //in seconds.  calculated based on temp/pressure ???     TODO:  Figure out the algorithm
+    //validate critical size
+    if(criticalSize<1){
+        criticalSize = 1;
+    }
+    if(criticalSize>10){
+        criticalSize = 10;
+    }
 
-    //set deposit rate based on pressure and temp.    TODO:  Figure out the algorithm
-    depRate = 10;  //in atoms per second
+    //Surface Diffusion.  set velocity based on temp.
+    maxDiffusionJumps = calculateMaxDiffusionJumps(temp);  //default 4
 
+    //set timeToLive or (desorption rate) static.
+    timeToLive = 10; //in seconds.
+
+    //set deposit rate based on pressure and temp.
+    depositionRate = calculateDepRate(pressure, temp);  //in atoms per second.  default 10
+
+}
+
+/*
+Calculates the deposition rate from pressure and temp.
+The pressure value is expected to be a value from 0 to 9 where 9 represents 10^(-9) torr
+The temp is expected to be from 0 to the max temperature value in K
+*/
+function calculateDepRate(pressure, temp){
+    var realPressure = Math.pow(10, (-1*pressure));
+    var sqrtTemp = Math.sqrt(temp);
+    var ptratio = realPressure/sqrtTemp;
+    return (3.01492*Math.pow(10, 10))*ptratio;
+}
+
+/*
+Calculates the maxDiffusionJumps based on temp
+ */
+function calculateMaxDiffusionJumps(temp){
+    if(temp<1){
+        return 0;
+    }
+    if(temp<401){
+        return 1;
+    }
+    if(temp<801){
+        return 2;
+    }
+    if(temp<1201){
+        return 3;
+    }
+    return 4;
 }
 
 function addRadii(r1, r2){
@@ -297,7 +350,9 @@ function desorb(){
   Finally, it compares the area covered vs. the total area and terminates the simulation if it's enough.
 */
 function process(){
-    var totalCapArea = 0;
+    //var totalCapArea = 0;
+    var largestCapArea = 0;
+    var tarea = 0;
     var newCaps = [];
 
    	for (var i = 0; i < caps.length; i++) {
@@ -312,7 +367,11 @@ function process(){
                     caps[j].keep = false;
                     var nc = caps[i].combine(caps[j]);
                     newCaps.push(nc);
-                    totalCapArea = totalCapArea + nc.area();
+                    tarea = nc.area();
+                    if(tarea>largestCapArea){
+                        largestCapArea = tarea;
+                    }
+                    //totalCapArea = totalCapArea + nc.area();
                 }
        	    }
         }
@@ -321,7 +380,11 @@ function process(){
     for (var i = 0; i < caps.length; i++) {
         if(caps[i].keep){
             newCaps.push(caps[i]);
-            totalCapArea = totalCapArea + caps[i].area();
+            tarea = caps[i].area();
+            if(tarea>largestCapArea){
+                largestCapArea = tarea;
+            }
+            //totalCapArea = totalCapArea + caps[i].area();
         }
         else{
             caps[i].remove();
@@ -330,7 +393,8 @@ function process(){
 
     caps = newCaps;
 
-    if((totalCapArea)>=(piSqd*canvasArea)){
+    if(largestCapArea>=(canvasArea*(0.75))){
+    //if((totalCapArea)>=(piSqd*canvasArea)){
         globals.runSimulation = false;
         running = false;
         var endTime = Date.now();

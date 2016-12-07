@@ -1,195 +1,442 @@
-function Ball(pRadius, pPoint, pVector) {
-
-	this.radius = pRadius;
-	this.point = pPoint;  //it's location
-	this.vector = pVector;  //it's direction
-
-	this.maxVec = 15;
-	this.numSegment = Math.floor(this.radius / 3 + 2);
-
-	this.boundOffset = [];
-	this.boundOffsetBuff = [];
-	this.sidePoints = [];
-
-
-	this.path = new Path({
-		fillColor: {
-			hue: 'blue',
-			saturation: 1,
-			brightness: 1
-		},
-		blendMode: 'lighter'
-	});
-
-	for (var i = 0; i < this.numSegment; i ++) {
-		this.boundOffset.push(this.radius);
-		this.boundOffsetBuff.push(this.radius);
-		this.path.add(new Point());
-		this.sidePoints.push(new Point({
-			angle: 360 / this.numSegment * i,
-			length: 1
-		}));
-	}
+/*
+Object definition of a molecule that is a single element in a cluster.
+*/
+function Molecule(rad, ttl){
+    this.radius = rad;
+    this.timeToLive = ttl;
+    this.timeToDie = Date.now() + this.timeToLive*1000;
 }
 
-Ball.prototype = {
-
-    //what does this function do?
-	iterate: function() {
-		this.checkBorders();
-		if (this.vector.length > this.maxVec)
-			this.vector.length = this.maxVec;
-		this.point += this.vector;
-		this.updateShape();
-	},
-
-    //checks to see if the ball hit the wall
-	checkBorders: function() {
-		var size = view.size;
-		if (this.point.x < -this.radius)
-			this.point.x = size.width + this.radius;
-		if (this.point.x > size.width + this.radius)
-			this.point.x = -this.radius;
-		if (this.point.y < -this.radius)
-			this.point.y = size.height + this.radius;
-		if (this.point.y > size.height + this.radius)
-			this.point.y = -this.radius;
-	},
-
-	updateShape: function() {
-		var segments = this.path.segments;
-		for (var i = 0; i < this.numSegment; i ++)
-			segments[i].point = this.getSidePoint(i);
-
-		this.path.smooth();
-		for (var i = 0; i < this.numSegment; i ++) {
-			if (this.boundOffset[i] < this.radius / 4)
-				this.boundOffset[i] = this.radius / 4;
-			var next = (i + 1) % this.numSegment;
-			var prev = (i > 0) ? i - 1 : this.numSegment - 1;
-			var offset = this.boundOffset[i];
-			offset += (this.radius - offset) / 15;
-			offset += ((this.boundOffset[next] + this.boundOffset[prev]) / 2 - offset) / 3;
-			this.boundOffsetBuff[i] = this.boundOffset[i] = offset;
-		}
-	},
-
-	react: function(b) {
-		var dist = this.point.getDistance(b.point);
-		if (dist < this.radius + b.radius && dist != 0) {
-			var overlap = this.radius + b.radius - dist;
-			var direc = (this.point - b.point).normalize(overlap * 0.015);
-			this.vector += direc;
-			b.vector -= direc;
-
-			this.calcBounds(b);
-			b.calcBounds(this);
-			this.updateBounds();
-			b.updateBounds();
-		}
-	},
-
-	getBoundOffset: function(b) {
-		var diff = this.point - b;
-		var angle = (diff.angle + 180) % 360;
-		return this.boundOffset[Math.floor(angle / 360 * this.boundOffset.length)];
-	},
-
-	calcBounds: function(b) {
-		for (var i = 0; i < this.numSegment; i ++) {
-			var tp = this.getSidePoint(i);
-			var bLen = b.getBoundOffset(tp);
-			var td = tp.getDistance(b.point);
-			if (td < bLen) {
-				this.boundOffsetBuff[i] -= (bLen  - td) / 2;
-			}
-		}
-	},
-
-	getSidePoint: function(index) {
-		return this.point + this.sidePoints[index] * this.boundOffset[index];
-	},
-
-	updateBounds: function() {
-		for (var i = 0; i < this.numSegment; i ++)
-			this.boundOffset[i] = this.boundOffsetBuff[i];
-	}
-};
-
-
-//--------------------- main ---------------------
-
-
 /*
-var balls = [];
+Object definition of a Cluster.
+*/
+function Cluster(pos, molecs, cs){
 
-var numBalls = 18;
-for (var i = 0; i < numBalls; i++) {
-	var position = Point.random() * view.size;
-	var vector = new Point({
-		angle: 360 * Math.random(),
-		length: Math.random() * 10
-	});
-	var radius = Math.random() * 60 + 60;
-	balls.push(new Ball(radius, position, vector));
+    //number of smaller Clusters in the cluster to prevent desorption
+    this.criticalSize = cs;
+
+    //all of the molecule instances that make up the cluster
+    this.molecules = [];
+    if(molecs instanceof Array){
+        for(i = 0; i < molecs.length; i++){
+            this.molecules.push(molecs[i]);
+        }
+    }
+    else{
+        this.molecules.push(molecs);
+    }
+
+    //the calculated radius.  it is "immutable".
+    this.radius = 0;
+    for(i = 0; i < this.molecules.length; i++){
+        this.radius = addRadii(this.radius, this.molecules[i].radius,2);
+    }
+
+    //this is the actual graphic that is displayed
+    this.circle = new Path.Circle({
+                     center: pos,
+                     radius: this.radius,
+                     fillColor: 'red'
+                 });
+
+
+    //use this during a processing loop to flag it if it is to be removed
+    this.keep = true;
+
 }
 
-balls.push(new Ball(35, new Point(0,0), new Point({
-    angle: 45,
-    length: 5
-})));
-balls.push(new Ball(50, new Point(0,1000), new Point({
-    angle: 135,
-    length: 5
-})))
-balls.push(new Ball(50, new Point(1000,0), new Point({
-    angle: 215,
-    length: 5
-})));
-balls.push(new Ball(50, new Point(1000,1000), new Point({
-    angle: 215,
-    length: 5
-})));
-
-*/
-
-
-
-var circle = new Path.Circle({
-    center: view.center,
-    radius: 25,
-    fillColor: 'red'
-});
-
-function onFrame() {
-
 /*
-    var myFPath = new Path();
-    myFPath.strokeColor = 'black';
-    //myFPath.add(new Point(0,0));
-    //myFPath.add(new Point(1000,1000));
-    var start = new Point(100,100);
-    myFPath.moveTo(start);
-    myFPath.lineTo(start + [100,100])
+Object methods for a Cluster
 */
+Cluster.prototype = {
 
+    getRadius: function(){
+        return this.radius;
+    },
 
+    /*
+    Moves this cluster according to the calculated maxDiffusionJumps
+    */
+    move: function(){
+        var rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
+        var x = rand * maxDiffusionJumps;
+        rand = (2*Math.random()) - 1; //gives me a number between -1 and 1
+        var y = rand * maxDiffusionJumps;
+        var newx = this.circle.position.x + x;
+        var newy = this.circle.position.y + y;
 
+        var newPt = new Point(newx, newy);
 
-/*
+        this.circle.position = newPt;
+        this.checkBorders();
+    },
 
-	for (var i = 0; i < balls.length - 1; i++) {
-		for (var j = i + 1; j < balls.length; j++) {
-			balls[i].react(balls[j]);
-		}
-	}
-	for (var i = 0, l = balls.length; i < l; i++) {
-		balls[i].iterate();
-	}
-*/
+    /*
+    Determines if this cluster is created or moved close to the border, and moves it away if so.
+    */
+    checkBorders: function(){
+        if((this.circle.position.x - this.radius)<0){
+            this.circle.position.x = this.radius;
+        }
+        if((this.circle.position.x + this.radius)>canvasWidth){
+            this.circle.position.x = canvasWidth - this.radius;
+        }
+        if((this.circle.position.y - this.radius)<0){
+            this.circle.position.y = this.radius;
+        }
+        if((this.circle.position.y + this.radius)>canvasHeight){
+            this.circle.position.y = canvasHeight - this.radius;
+        }
+    },
+
+    /*
+    Determines if this cluster has collided with the passed in cluster
+    */
+    collision: function(sc){
+    	var dist = this.circle.position.getDistance(sc.circle.position);
+    	var myrad = this.getRadius();
+    	var scrad = sc.getRadius();
+    	if ( (dist < (myrad + scrad)) && (dist != 0)) {
+    	    return true;
+    	}
+        return false;
+    },
+
+    /*
+    Creates a new cluster that is the combination of this cluster and the passed in cluster
+    */
+    combine: function(sc){
+        var position = this.circle.position.add(sc.circle.position);
+        position = position.divide(2);
+        //var rad = addRadii(this.getRadius(), sc.getRadius());
+        var molecs = [];
+        for(i = 0; i < this.molecules.length; i++){
+            molecs.push(this.molecules[i]);
+        }
+        for(i = 0; i < sc.molecules.length; i++){
+            molecs.push(sc.molecules[i]);
+        }
+        var nsc = new Cluster(position, molecs, this.criticalSize);
+        nsc.checkBorders();
+        return nsc;
+    },
+
+    /*
+    Determines if any molecule within the cluster should desorb.
+    If so, it will set itself to be removed and return a new cluster with the desorbed molecule out of the cluster.
+    If no more molecules remain in the cluster, it will just set itself it be removed and return null.
+    If it shouldn't be removed, it will return null.
+    */
+    desorb: function(now){
+        if(this.molecules.length>=this.criticalSize){
+            this.keep = true;
+            return this;
+        }
+        var newMolecules = [];
+        for(i = 0; i < this.molecules.length; i++){
+            var e = this.molecules[i];
+            if(e.timeToDie>=now){
+                newMolecules.push(e);
+            }
+        }
+        if(newMolecules.length>=this.molecules.length){
+            this.keep = true;
+            return this;
+        }
+        if(newMolecules.length<1){
+            this.keep = false;
+            return null;
+        }
+        this.keep = false;
+        var nsc = new Cluster(this.circle.position, newMolecules, this.criticalSize);
+        return nsc;
+    },
+
+    remove: function(){
+        this.circle.remove();
+    },
+
+    area: function(){
+        return this.circle.area;
+    }
+
 }
 
-function onResize(event) {
-    circle.position =  view.center;
-    console.log('y');
+
+//simulation environment parameters
+var canvasWidth = 550;
+var canvasHeight = 550;
+var canvasArea = canvasWidth*canvasHeight;
+var timeStepSize = .25;
+var maxDepRate = 1000;
+
+//process flow variables
+var running = false;
+var lastTime = 0;
+var startTime = 0;
+
+//global list of clusters
+var gClusters = [];
+
+//varying parameters per simulation
+var temp = 300;  // set by user
+var pressure = -4;  // set by user
+var criticalSize = 3;   //set by user
+var depositionRate = 10;  //in atoms per second.  calculated based on temp/pressure
+var timeToLive = 300; //in seconds.  calculated based on temp/pressure ???
+var maxDiffusionJumps = 4;//in arb units.  calculated based on temp
+
+/*
+  Called once on page load
+*/
+function initializePage(){
+    var rect = new Rectangle(new Point(1,1), new Size(canvasWidth-2, canvasHeight-2));
+    var frameRect = new Path.Rectangle(rect);
+    frameRect.strokeColor = 'black';
+}
+
+initializePage();
+
+/*
+Determines if the process should be run on an invocation of onFrame
+*/
+function doRun(){
+    if(!running){
+        if(globals.runSimulation){
+            setParameters();
+            resetGrid();
+            temp = globals.temp;
+            pressure = globals.pressure;
+            startTime = Date.now();
+            running = true;
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    else{
+        if(!globals.runSimulation){
+            running = false;
+            return false;
+        }
+        return true;
+    }
+}
+
+/*
+Perform all calculations based on input values
+*/
+function setParameters(){
+    temp = globals.temp;
+    pressure = globals.pressure;
+    criticalSize = globals.criticalSize;
+
+    //validate input temperature
+    if(temp<0){
+        temp = 0;
+    }
+    if(temp>1687.15){
+        temp = 1687.15;
+    }
+
+    //validate input pressure
+    pressure = Math.abs(pressure);
+    if(pressure > 9){
+        pressure = 9;
+    }
+
+    //validate critical size
+    if(criticalSize<1){
+        criticalSize = 1;
+    }
+    if(criticalSize>10){
+        criticalSize = 10;
+    }
+
+    //Surface Diffusion.  set velocity based on temp.
+    maxDiffusionJumps = calculateMaxDiffusionJumps(temp);  //default 4
+
+    //set timeToLive or (desorption rate) static.
+    timeToLive = 10; //in seconds.
+
+    //set deposit rate based on pressure and temp.
+    depositionRate = calculateDepRate(pressure, temp);  //in atoms per second.  default 10
+
+    console.log("Using these parameters");
+    console.log("Temp: " + temp);
+    console.log("Pressure: " + pressure);
+    console.log("Critical Size: " + criticalSize);
+    console.log("Max Diffusion Jumps: " + maxDiffusionJumps);
+    console.log("Time to Live: " + timeToLive);
+    console.log("Deposition Rate: " + depositionRate);
+}
+
+/*
+Calculates the deposition rate from pressure and temp.
+The pressure value is expected to be a value from 0 to 9 where 9 represents 10^(-9) torr
+The temp is expected to be from 0 to the max temperature value in K
+*/
+function calculateDepRate(pressure, temp){
+    var realPressure = Math.pow(10, (-1*pressure));
+    var sqrtTemp = Math.sqrt(temp);
+    var ptratio = realPressure/sqrtTemp;
+    return (3.01492*Math.pow(10, 10))*ptratio;
+}
+
+/*
+Calculates the maxDiffusionJumps based on temp
+ */
+function calculateMaxDiffusionJumps(temp){
+    if(temp<1){
+        return 0;
+    }
+    if(temp<401){
+        return 1;
+    }
+    if(temp<801){
+        return 2;
+    }
+    if(temp<1201){
+        return 3;
+    }
+    return 4;
+}
+
+function addRadii(r1, r2){
+    return Math.sqrt(Math.pow(r1,2) + Math.pow(r2,2));
+}
+
+/*
+Clear off clusters from previous run
+*/
+function resetGrid(){
+    for(i = 0; i < gClusters.length; i++){
+        gClusters[i].remove();
+    }
+    gClusters = [];
+}
+
+/*
+Add clusters of 1 molecule according to calculated rate
+*/
+function deposit(){
+    var depRate = depositionRate;
+    if(depRate>maxDepRate){
+        depRate = maxDepRate;
+        console.log("Warning.  Max deposition rate exceeded.  Using rate: " + depRate);
+    }
+    var amountToAdd = Math.round(depRate*timeStepSize);
+    for(k = 0; k < amountToAdd; k++){
+        gClusters.push(new Cluster(new Point(Math.random()*canvasWidth, Math.random()*canvasHeight),
+                    new Molecule(2, timeToLive),
+                    criticalSize));
+    }
+}
+
+/*
+Remove molecules according to calculated rate.
+*/
+function desorb(){
+    var now = Date.now();
+    var newClusters = [];
+    var c;
+   	for (var i = 0; i < gClusters.length; i++) {
+   	    c = gClusters[i].desorb(now);
+   	    if(c != null){
+   	        newClusters.push(c);
+   	    }
+    }
+    for (var i = 0; i < gClusters.length; i++) {
+        if(!gClusters[i].keep){
+            gClusters[i].remove();
+        }
+    }
+
+    gClusters = newClusters;
+}
+
+/*
+  The complex processing of a single processing.
+  First, it moves the cluster according to the calculated rate.
+  Next it detects collisions.  It will combine clusters that collide into a single molecule/cluster.
+  Next it will remove the cluster that collided (because combining just adds a new one without removing the old).
+  Finally, it compares the area covered vs. the total area and terminates the simulation if it's enough.
+*/
+function process(){
+    var largestArea = 0;
+    var tarea = 0;
+    var newClusters = [];
+
+   	for (var i = 0; i < gClusters.length; i++) {
+        gClusters[i].move();
+    }
+
+   	for (var i = 0; i < gClusters.length; i++) {
+       	for (var j = 0; j < gClusters.length; j++) {
+       	    if((i!=j) && (gClusters[j].keep)){
+                if(gClusters[i].collision(gClusters[j])){
+                    gClusters[i].keep = false;
+                    gClusters[j].keep = false;
+                    var nc = gClusters[i].combine(gClusters[j]);
+                    newClusters.push(nc);
+                    tarea = nc.area();
+                    if(tarea>largestArea){
+                        largestArea = tarea;
+                    }
+                }
+       	    }
+        }
+    }
+
+    for (var i = 0; i < gClusters.length; i++) {
+        if(gClusters[i].keep){
+            newClusters.push(gClusters[i]);
+            tarea = gClusters[i].area();
+            if(tarea>largestArea){
+                largestArea = tarea;
+            }
+        }
+        else{
+            gClusters[i].remove();
+        }
+    }
+
+    gClusters = newClusters;
+
+    if(largestArea>=(canvasArea*(0.75))){
+        globals.runSimulation = false;
+        running = false;
+        var endTime = Date.now();
+        var totalTime = endTime - startTime;
+        globals.simulationEnded(totalTime);
+    }
+
+}
+
+/*
+  Called by Paper.js framework up to 60 times per second.
+
+  This is the primary function.
+  If the simulation is running, or should start, it executes the process
+   First it desorbs() i.e. all the atoms that have been there too long go away.
+   Next ie deposits() i.e. add new atoms according to the calculated rate.
+   Finally it executes the process, which does a lot (see comments)
+*/
+function onFrame(event){
+     lastTime = lastTime + event.delta;
+     if(lastTime >=timeStepSize){
+        if(doRun()){
+
+            //delete old clusters
+            desorb();
+
+            ////add new clusters
+            deposit();
+
+            process();
+
+            lastTime = 0;
+        }
+     }
 }

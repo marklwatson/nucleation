@@ -3,7 +3,7 @@
     <title>Nucleation</title>
     <link rel="stylesheet" type="text/css" href="nuc.css"/>
 	<script type="text/javascript" src="paperjs/paper-full.js"></script>
-	<script type="text/paperscript" src="play.js" canvas="myCanvas"></script>
+	<script type="text/paperscript" src="nucleation.js" canvas="myCanvas"></script>
     <script type="text/javascript">
         var completeTime = 0;
         window.globals = {
@@ -33,14 +33,20 @@
     <!-- <H3>Nucleation</H3>  -->
     <table>
         <tr>
-            <td>Temp</td>
-            <td>Pressure (log)</td>
+            <td>Temp (K)</td>
+            <td>Pressure (log in Torr)</td>
             <td>Critical Size</td>
             <td></td>
         </tr>
         <tr>
+            <td>0 - 1687.15</td>
+            <td>9 (lowest) - 0 (highest)</td>
+            <td>1 - 10</td>
+            <td></td>
+        </tr>
+        <tr>
             <td><input type="text" name="temp" id="temp" value="300"></td>
-            <td><input type="text" name="pressure" id="pressure" value="-4"></td>
+            <td><input type="text" name="pressure" id="pressure" value="7"></td>
             <td><input type="text" name="criticalSize" id="criticalSize" value="3"></td>
             <td><input type="submit" id="go" name="go" value="Run" onclick="goClicked()"></td>
         </tr>
